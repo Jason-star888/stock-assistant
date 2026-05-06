@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Stock Assistant MVP</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --primary: #111827;
+      --green: #0f9f6e;
+      --red: #d93025;
+      --yellow: #b7791f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: radial-gradient(circle at top, #ffffff 0, var(--bg) 48%, #eef2f7 100%);
+      color: var(--text);
+    }
+    .container { max-width: 1080px; margin: 0 auto; padding: 48px 20px; }
+    .hero { display: flex; justify-content: space-between; gap: 32px; align-items: flex-end; margin-bottom: 28px; }
+    h1 { font-size: 42px; line-height: 1.08; letter-spacing: -1.4px; margin: 0 0 12px; }
+    .sub { color: var(--muted); font-size: 16px; line-height: 1.7; max-width: 680px; }
+    .search { display: flex; gap: 12px; background: rgba(255,255,255,.78); border: 1px solid var(--border); padding: 10px; border-radius: 20px; box-shadow: 0 20px 60px rgba(15, 23, 42, .08); }
+    input { width: 220px; border: 0; outline: none; padding: 12px 14px; font-size: 16px; background: transparent; }
+    button { border: 0; padding: 12px 20px; border-radius: 14px; background: var(--primary); color: #fff; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 18px; }
+    .card { background: rgba(255,255,255,.86); backdrop-filter: blur(20px); border: 1px solid rgba(229,231,235,.9); border-radius: 26px; padding: 24px; box-shadow: 0 18px 50px rgba(15, 23, 42, .06); }
+    .card h2 { margin: 0 0 16px; font-size: 20px; letter-spacing: -.3px; }
+    .score { font-size: 56px; font-weight: 800; letter-spacing: -2px; }
+    .status { display: inline-flex; margin-top: 8px; padding: 8px 12px; border-radius: 999px; background: #f3f4f6; font-weight: 700; }
+    .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 22px; }
+    .metric { border: 1px solid var(--border); border-radius: 18px; padding: 14px; }
+    .metric .label { color: var(--muted); font-size: 12px; }
+    .metric .value { margin-top: 6px; font-weight: 800; font-size: 18px; }
+    .section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .section-title { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+    ul { padding-left: 20px; line-height: 1.8; margin: 8px 0 0; }
+    .warning li { color: #8a4b08; }
+    .empty { color: var(--muted); text-align: center; padding: 80px 20px; }
+    .error { color: var(--red); background: #fff5f5; border: 1px solid #ffdada; padding: 14px; border-radius: 16px; display: none; margin-bottom: 16px; }
+    .disclaimer { color: var(--muted); font-size: 12px; line-height: 1.7; margin-top: 20px; }
+    @media (max-width: 860px) { .hero, .grid { display: block; } .search { margin-top: 20px; } .card { margin-bottom: 16px; } .meta { grid-template-columns: repeat(2, 1fr); } h1 { font-size: 34px; } }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <div class="hero">
+      <div>
+        <h1>AI Stock Assistant</h1>
+        <div class="sub">输入 A 股代码，系统会基于近期 K 线、均线、RSI、MACD 和量能变化，输出一个可读的交易辅助判断。</div>
+      </div>
+      <div class="search">
+        <input id="symbol" value="600519" placeholder="例如 600519" maxlength="6" />
+        <button id="btn" onclick="analyze()">分析</button>
+      </div>
+    </div>
+
+    <div id="error" class="error"></div>
+    <div id="result" class="empty">输入股票代码后点击分析。</div>
+
+    <div class="disclaimer">免责声明：本工具仅用于个人研究与交易辅助，不构成任何投资建议。市场有风险，交易需谨慎。</div>
+  </main>
+
+  <script>
+    const API_BASE = 'http://127.0.0.1:8000';
+
+    function metric(label, value) {
+      return `<div class="metric"><div class="label">${label}</div><div class="value">${value ?? '-'}</div></div>`;
+    }
+
+    function list(items) {
+      return `<ul>${items.map(item => `<li>${item}</li>`).join('')}</ul>`;
+    }
+
+    async function analyze() {
+      const symbol = document.getElementById('symbol').value.trim();
+      const btn = document.getElementById('btn');
+      const error = document.getElementById('error');
+      const result = document.getElementById('result');
+      error.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = '分析中...';
+      result.className = 'empty';
+      result.innerHTML = '正在获取行情并计算指标...';
+
+      try {
+        const res = await fetch(`${API_BASE}/analyze?symbol=${encodeURIComponent(symbol)}`);
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text);
+        }
+        const data = await res.json();
+        const a = data.analysis;
+        const l = data.latest;
+        result.className = 'grid';
+        result.innerHTML = `
+          <section class="card">
+            <h2>${data.symbol} · ${data.date}</h2>
+            <div class="score">${a.score}</div>
+            <div class="status">${a.status}</div>
+            <div class="section">
+              <div class="section-title">综合判断</div>
+              <div>${a.summary}</div>
+            </div>
+            <div class="meta">
+              ${metric('收盘价', l.close)}
+              ${metric('涨跌幅', l.pct_change === null ? '-' : l.pct_change + '%')}
+              ${metric('风险等级', a.risk)}
+              ${metric('RSI14', l.rsi14)}
+              ${metric('量比', l.vol_ratio)}
+              ${metric('MACD柱', l.macd_hist)}
+            </div>
+            <div class="section">
+              <div class="section-title">操作建议</div>
+              <div>${a.action}</div>
+            </div>
+            <div class="section">
+              <div class="section-title">关键价位</div>
+              <div>买入观察：${a.buy_zone}</div>
+              <div style="margin-top:8px;">止损观察：${a.stop_loss}</div>
+              <div style="margin-top:8px;">止盈思路：${a.take_profit}</div>
+            </div>
+          </section>
+          <aside class="card">
+            <h2>信号拆解</h2>
+            <div class="section">
+              <div class="section-title">正向因素</div>
+              ${list(a.reasons)}
+            </div>
+            <div class="section warning">
+              <div class="section-title">风险提示</div>
+              ${list(a.warnings)}
+            </div>
+            <div class="section">
+              <div class="section-title">均线</div>
+              <div>MA5：${l.ma5} ｜ MA10：${l.ma10}</div>
+              <div style="margin-top:8px;">MA20：${l.ma20} ｜ MA60：${l.ma60}</div>
+            </div>
+          </aside>
+        `;
+      } catch (e) {
+        error.style.display = 'block';
+        error.textContent = '分析失败：' + e.message;
+        result.className = 'empty';
+        result.innerHTML = '请确认后端已启动，且股票代码为 6 位 A 股代码。';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '分析';
+      }
+    }
+  </script>
+</body>
+</html>
