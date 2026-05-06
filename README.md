@@ -1,48 +1,29 @@
-# AI Stock Assistant MVP
+# AI Stock Assistant
 
-一个用于个人试用的 A 股 AI 盯盘与交易辅助原型。
+一个可以直接部署为网页使用的 A 股交易辅助原型。
 
 > 注意：本项目仅用于个人研究和交易辅助，不构成投资建议，不承诺收益。
 
+## 在线使用
+
+GitHub Pages 开启后，可访问：
+
+```text
+https://jason-star888.github.io/stock-assistant/
+```
+
 ## 目前能力
 
+- 纯前端运行，不需要本地启动 Python 后端
 - 输入 A 股股票代码，例如 `600519`、`000001`、`300750`
-- 拉取近期日线行情
+- 获取近期日线行情
 - 计算 MA5 / MA10 / MA20 / MA60、RSI、MACD、成交量变化
 - 输出趋势判断、量能判断、风险等级、操作状态和关键价位
-- 前端页面可直接调用本地后端接口
+- 支持手机浏览器访问
 
-## 本地运行
+## 使用方式
 
-### 1. 安装依赖
-
-```bash
-pip install -r requirements.txt
-```
-
-### 2. 启动后端
-
-```bash
-uvicorn app.main:app --reload --port 8000
-```
-
-### 3. 打开页面
-
-直接用浏览器打开：
-
-```bash
-frontend/index.html
-```
-
-也可以直接访问接口：
-
-```bash
-http://127.0.0.1:8000/analyze?symbol=600519
-```
-
-## 股票代码格式
-
-直接输入 6 位 A 股代码即可：
+直接打开网页，输入 6 位 A 股代码：
 
 ```text
 600519
@@ -61,11 +42,22 @@ http://127.0.0.1:8000/analyze?symbol=600519
 | 35-50 | 减仓/谨慎 |
 | 0-35 | 止损/回避 |
 
-## 后续升级方向
+## GitHub Pages 部署
 
-- 接入实时分时行情
-- 增加板块热度分析
-- 增加新闻/公告抓取
-- 增加自选股列表
-- 增加 AI 大模型总结
-- 增加信号回测和胜率统计
+本仓库已添加 GitHub Pages 自动部署工作流：
+
+```text
+.github/workflows/pages.yml
+```
+
+如果页面没有自动生效，请到仓库：
+
+```text
+Settings → Pages → Build and deployment → Source 选择 GitHub Actions
+```
+
+然后重新运行 Actions 即可。
+
+## 免责声明
+
+本工具仅作为个人研究和交易辅助，不构成证券投资建议。市场有风险，交易需谨慎。
