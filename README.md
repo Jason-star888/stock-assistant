@@ -56,7 +56,7 @@ https://jason-star888.github.io/stock-assistant/
 Settings → Pages → Build and deployment → Source 选择 GitHub Actions
 ```
 
-然后重新运行 Actions 即可。
+然后进入 Actions 页面查看部署结果。
 
 ## 免责声明
 
